@@ -5,7 +5,7 @@ status: todo
 type: feature
 priority: high
 created_at: 2026-04-30T13:11:29Z
-updated_at: 2026-04-30T13:11:29Z
+updated_at: 2026-04-30T13:18:29Z
 ---
 
 # Spec: Command Patch System
@@ -182,3 +182,202 @@ export type PatchFrontmatter = {
 
 1. **Error handling on patch apply failure** — Should the build warn and continue (with upstream as fallback) or fail hard? _(Recommendation: fail hard — silent fallback hides mistakes.)_
 2. **Should `src/command-patches/` support adding brand-new commands not in upstream?** _(Currently out of scope — this spec only covers patching existing ones. New commands can go directly in a separate `src/commands/` directory if needed later.)_
+
+---
+
+# Implementation Plan
+
+## Overview
+
+Build the command patch system in three vertical slices: first the pure logic layer with tests, then the build integration, then the example patch that proves the end-to-end path.
+
+## Dependency Graph
+
+```
+src/patch.ts (pure functions: parsePatchFrontmatter, applyPatch)
+    │
+    ├── src/patch.test.ts (unit tests for all merge rules)
+    │
+    └── tsdown.config.ts (plugin reads FS, calls applyPatch, writes dist/commands/)
+            │
+            └── src/command-patches/*.md (patch files consumed at build time)
+```
+
+Implementation order: patch logic → tests → build plugin → example patch → end-to-end verification.
+
+---
+
+## Phase 1: Core Patch Logic
+
+### Task 1: Implement `src/patch.ts` — pure patch functions
+
+**Description:** Create `src/patch.ts` with two exported pure functions: `parsePatchFrontmatter` (parses YAML front-matter from a patch file string) and `applyPatch` (applies a parsed patch to an upstream command string). No FS calls. No side effects.
+
+**Acceptance criteria:**
+
+- [ ] `parsePatchFrontmatter(patchContent)` returns `{ description?, prepend?, append? }` and the body below `---`
+- [ ] `applyPatch(upstream, patch)` applies merge rules in order: description override → prepend → body replace (if patch body non-empty) → append
+- [ ] Returns upstream unchanged when patch is an empty string or has no fields set
+- [ ] Named exports only; no default export; explicit TypeScript types (`PatchFrontmatter`)
+
+**Verification:**
+
+- [ ] `pnpm test` passes (tests written in Task 2 cover this)
+- [ ] `pnpm lint` clean
+- [ ] `pnpm fmt` clean
+
+**Dependencies:** None
+
+**Files touched:**
+
+- `src/patch.ts` (new)
+
+**Estimated scope:** S
+
+---
+
+### Task 2: Write unit tests in `src/patch.test.ts`
+
+**Description:** Cover every merge rule and edge case for `applyPatch` and `parsePatchFrontmatter` using the Node built-in test runner.
+
+**Acceptance criteria:**
+
+- [ ] Description override: patch `description` replaces upstream description
+- [ ] Prepend only: upstream description and body unchanged; text prepended before body
+- [ ] Append only: upstream description and body unchanged; text appended after body
+- [ ] Body replace: patch body fully replaces upstream body; prepend/append still apply
+- [ ] All three fields set together (description + prepend + body replace + append): correct merged output
+- [ ] Empty patch (no front-matter fields, no body): upstream returned unchanged
+- [ ] No patch file case handled (caller responsibility — tested via "upstream pass-through" assertion)
+
+**Verification:**
+
+- [ ] `pnpm test` exits 0 with all assertions passing
+- [ ] No skipped or pending tests
+
+**Dependencies:** Task 1
+
+**Files touched:**
+
+- `src/patch.test.ts` (new)
+
+**Estimated scope:** S
+
+### Checkpoint: Phase 1
+
+- [ ] `pnpm test` passes (all tests green)
+- [ ] `pnpm lint` clean
+- [ ] `pnpm fmt` clean
+- [ ] Human review of `src/patch.ts` API surface before proceeding
+
+---
+
+## Phase 2: Build Integration
+
+### Task 3: Add patch plugin to `tsdown.config.ts`
+
+**Description:** Extend `tsdown.config.ts` with a custom plugin that, after the `copy` step copies upstream commands to `dist/commands/`, reads any matching file from `src/command-patches/`, calls `applyPatch`, and writes the merged result back to `dist/commands/`. If a patch file exists but `applyPatch` throws, the build must fail hard (no silent fallback).
+
+**Acceptance criteria:**
+
+- [ ] Plugin runs after upstream commands are copied
+- [ ] For each file in `dist/commands/*.md`, if `src/command-patches/<name>.md` exists, the merged output is written to `dist/commands/<name>.md`
+- [ ] If no patch file exists for a command, the upstream file is left unchanged
+- [ ] Build fails with a clear error message if patch application throws
+- [ ] No changes to `src/commands.ts`, `src/main.ts`, or the `agent-skills/` submodule
+
+**Verification:**
+
+- [ ] `pnpm start` succeeds with no patches present (regression test)
+- [ ] `pnpm start` with a minimal test patch produces merged output in `dist/commands/`
+- [ ] `pnpm lint` clean
+
+**Dependencies:** Task 1 (uses `applyPatch`)
+
+**Files touched:**
+
+- `tsdown.config.ts` (updated)
+
+**Estimated scope:** S–M
+
+---
+
+### Task 4: Add example patch `src/command-patches/spec.md`
+
+**Description:** Create a real patch for `spec.md` using only `append` (additive, safe for submodule upgrades). This exercises the full pipeline and serves as the canonical example for future patch authors.
+
+**Acceptance criteria:**
+
+- [ ] `src/command-patches/spec.md` uses YAML front-matter with only `append` set
+- [ ] `pnpm start` produces `dist/commands/spec.md` that contains the upstream content with the appended text at the end
+- [ ] Upstream description and body are intact in the output
+- [ ] File is committed alongside the code changes
+
+**Verification:**
+
+- [ ] `pnpm start` exits 0
+- [ ] `diff` or manual inspection confirms `dist/commands/spec.md` = upstream + appended content
+- [ ] `pnpm test` still passes (no regressions)
+
+**Dependencies:** Task 3
+
+**Files touched:**
+
+- `src/command-patches/spec.md` (new)
+
+**Estimated scope:** XS
+
+### Checkpoint: Phase 2
+
+- [ ] `pnpm start` succeeds end-to-end
+- [ ] `pnpm test` passes
+- [ ] `dist/commands/spec.md` visually correct (upstream + patch)
+- [ ] Human review of plugin code and example patch before final commit
+
+---
+
+## Phase 3: Polish and Verification
+
+### Task 5: Final acceptance run
+
+**Description:** Verify all five spec success criteria are met. Remove any temp/debug artifacts. Ensure `src/command-patches/` is committed.
+
+**Acceptance criteria:**
+
+- [ ] SC1: `pnpm start` succeeds; `dist/commands/spec.md` reflects the applied patch
+- [ ] SC2: `pnpm test` passes including all new unit tests
+- [ ] SC3: A patch with only `append` leaves upstream description and body intact
+- [ ] SC4: Removing `src/command-patches/spec.md` and running `pnpm start` produces unpatched `dist/commands/spec.md`
+- [ ] SC5: No changes to `agent-skills/`, `src/commands.ts`, or `src/main.ts`
+
+**Verification:**
+
+- [ ] All five success criteria checked manually
+- [ ] `pnpm lint` + `pnpm fmt` clean
+
+**Dependencies:** Tasks 1–4
+
+**Files touched:** none (verification only)
+
+**Estimated scope:** XS
+
+### Checkpoint: Complete
+
+- [ ] All acceptance criteria met
+- [ ] All tests green
+- [ ] Ready for review and commit
+
+---
+
+## Risks and Mitigations
+
+| Risk                                                                          | Impact | Mitigation                                                                                        |
+| ----------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------- |
+| tsdown `copy` runs async; plugin hook timing unclear                          | High   | Verify plugin hook order in tsdown docs; use `buildEnd` or equivalent post-copy hook              |
+| YAML parse of upstream front-matter differs from patch front-matter structure | Medium | Keep `parsePatchFrontmatter` focused only on patch files; upstream parsing stays in `commands.ts` |
+| Submodule update breaks patch context (body replace)                          | Low    | Prefer `append`-only patches; document body-replace as an explicit risk                           |
+
+## Open Questions (from spec)
+
+1. **Error handling:** Spec recommends fail-hard. Plan adopts this — build throws on patch failure.
+2. **New commands from patches:** Out of scope per spec. Not implemented.
