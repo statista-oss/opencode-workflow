@@ -1,11 +1,11 @@
 ---
 # opencode-workflow-mu9x
 title: Command patch system
-status: todo
+status: completed
 type: feature
 priority: high
 created_at: 2026-04-30T13:11:29Z
-updated_at: 2026-04-30T13:18:29Z
+updated_at: 2026-04-30T13:25:57Z
 ---
 
 # Spec: Command Patch System
@@ -381,3 +381,62 @@ Implementation order: patch logic → tests → build plugin → example patch �
 
 1. **Error handling:** Spec recommends fail-hard. Plan adopts this — build throws on patch failure.
 2. **New commands from patches:** Out of scope per spec. Not implemented.
+
+## Summary of Changes
+
+Implemented the command patch system across 4 tasks in 2 commits:
+
+**Commit 1 — Pure patch logic + tests (, ):**
+
+- — parses YAML front-matter and body from a patch file
+- — applies merge rules: description override → prepend → body replace → append
+- 11 unit tests covering all merge rules and edge cases; all pass
+
+**Commit 2 — Build integration + example patch (, ):**
+
+- Added hook to tsdown config that reads and applies to each matching
+- Build fails hard if patch application throws; upstream files left unchanged when no patch exists
+- — append-only example that adds the incremental-implementation workflow to the spec command
+
+**All 5 success criteria verified:**
+
+1.  > @statista-oss/opencode-workflow@0.0.2 start /workspaces/opencode-workflow
+    > tsdown
+
+[34mℹ[39m [34mtsdown v0.21.10[39m powered by [38;2;255;126;23mrolldown v1.0.0-rc.17[39m
+[34mℹ[39m config file: [4m/workspaces/opencode-workflow/tsdown.config.ts[24m
+[34mℹ[39m entry: [34m./src/main.ts[39m
+[34mℹ[39m tsconfig: [34mtsconfig.json[39m
+[34mℹ[39m Build start
+[34mℹ[39m Cleaning 70 files
+[34mℹ[39m [2mdist/[22m[1mmain.mjs[22m [2m234.76 kB[22m [2m│ gzip: 53.53 kB[22m
+[34mℹ[39m [2mdist/[22m[32m[1mmain.d.mts[22m[39m [2m 0.16 kB[22m [2m│ gzip: 0.13 kB[22m
+[34mℹ[39m 2 files, total: 234.93 kB
+[32m✔[39m Build complete in [32m184ms[39m
+[32m✔[39m [2m[attw][22m No problems found [2m(1015ms)[22m
+[32m✔[39m [2m[publint][22m No issues found [2m(1070ms)[22m
+[patch] Applied patch: dist/commands/spec.md succeeds; reflects the applied patch 2.
+
+> @statista-oss/opencode-workflow@0.0.2 test /workspaces/opencode-workflow
+> node --test
+
+✔ loadCommand (13.687208ms)
+✔ parsePatchFrontmatter: parses description (8.966457ms)
+✔ parsePatchFrontmatter: parses prepend and append (3.738618ms)
+✔ parsePatchFrontmatter: captures body below front-matter (0.795655ms)
+✔ parsePatchFrontmatter: empty string returns empty frontmatter and body (0.75569ms)
+✔ applyPatch: empty patch returns upstream unchanged (0.464006ms)
+✔ applyPatch: patch with no fields returns upstream unchanged (0.463785ms)
+✔ applyPatch: description override replaces upstream description (1.676739ms)
+✔ applyPatch: prepend only — adds text before upstream body (1.178563ms)
+✔ applyPatch: append only — adds text after upstream body (2.285586ms)
+✔ applyPatch: body replace — patch body fully replaces upstream body (0.702561ms)
+✔ applyPatch: all fields — description + prepend + body replace + append (1.372582ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 298.246228 passes (12/12) 3. Append-only patch leaves upstream description and body intact 4. Removing the patch file causes upstream to pass through unchanged 5. No changes to , , or
