@@ -1,0 +1,42 @@
+{
+  "name": "opencode-workflow",
+  "version": "0.0.1",
+  "keywords": [],
+  "license": "ISC",
+  "author": "",
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": "./dist/main.mjs"
+  },
+  "scripts": {
+    "prepare": "husky",
+    "start": "tsdown",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "fmt": "oxfmt"
+  },
+  "dependencies": {
+    "@opencode-ai/plugin": "^1.14.30",
+    "yaml": "^2.8.3"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/core": "^0.18.2",
+    "@types/node": "^25.6.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "oxfmt": "^0.47.0",
+    "oxlint": "^1.62.0",
+    "oxlint-tsgolint": "^0.22.1",
+    "publint": "^0.3.18",
+    "tsdown": "^0.21.10"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,mjs,cjs}": "pnpm run lint",
+    "*": "oxfmt --no-error-on-unmatched-pattern"
+  },
+  "packageManager": "pnpm@10.33.2"
+}
