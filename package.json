@@ -4,6 +4,9 @@
   "keywords": [],
   "license": "ISC",
   "author": "",
+  "repository": {
+    "url": "https://github.com/statista-oss/opencode-workflow"
+  },
   "files": [
     "dist"
   ],
