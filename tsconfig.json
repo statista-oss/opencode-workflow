@@ -3,12 +3,13 @@
     "rootDir": "./",
     "outDir": "./dist",
 
-    "module": "esnext",
+    "module": "nodenext",
     "target": "esnext",
     "lib": ["esnext"],
     "types": ["node"],
 
     "declaration": true,
+    "noEmit": true,
 
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
@@ -20,6 +21,7 @@
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true
   }
 }

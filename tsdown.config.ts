@@ -6,6 +6,7 @@ const config: UserConfig = defineConfig({
   copy: ["src/prompt-patch.md", "./agent-skills/skills", "./agent-skills/.claude/commands"],
   dts: true,
   deps: {
+    onlyBundle: ["yaml"],
     alwaysBundle: ["yaml"],
   },
 

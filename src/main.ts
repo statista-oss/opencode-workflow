@@ -1,7 +1,7 @@
 import type { Config, Plugin } from "@opencode-ai/plugin";
 import Fs from "node:fs/promises";
 import Path from "node:path";
-import { loadCommands } from "./commands";
+import { loadCommands } from "./commands.ts";
 
 type ConfigWithPaths = Config & { skills?: { paths?: string[] } };
 
