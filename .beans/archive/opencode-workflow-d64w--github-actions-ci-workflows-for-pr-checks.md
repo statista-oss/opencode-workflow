@@ -1,10 +1,11 @@
 ---
 # opencode-workflow-d64w
 title: GitHub Actions CI Workflows for PR Checks
-status: todo
+status: completed
 type: feature
+priority: normal
 created_at: 2026-04-30T11:26:45Z
-updated_at: 2026-04-30T11:26:45Z
+updated_at: 2026-04-30T11:33:37Z
 ---
 
 Add GitHub Actions workflows that automatically run on every pull request to enforce code quality and correctness before merging.
@@ -56,10 +57,18 @@ One job with sequential steps:
 
 ## Success Criteria
 
-- [ ] `.github/workflows/ci.yml` exists and is valid YAML
-- [ ] Workflow triggers on `pull_request` events
-- [ ] All four checks run in order: build → test → lint → format
-- [ ] A failing test causes the job to fail
-- [ ] A lint violation causes the job to fail
-- [ ] A format violation causes the job to fail
-- [ ] `pnpm install` uses the lockfile and caches the store between runs
+- [x] `.github/workflows/ci.yml` exists and is valid YAML
+- [x] Workflow triggers on `pull_request` events
+- [x] All four checks run in order: build → test → lint → format
+- [x] A failing test causes the job to fail
+- [x] A lint violation causes the job to fail
+- [x] A format violation causes the job to fail
+- [x] `pnpm install` uses the lockfile and caches the store between runs
+
+## Summary of Changes
+
+- Created `.github/workflows/ci.yml` with a single `ci` job that sequentially runs: install, build, test, lint, format check.
+- Actions pinned to `@v4` (actions/checkout, pnpm/action-setup, actions/setup-node).
+- pnpm store cached via `setup-node` cache option; `--frozen-lockfile` enforced on install.
+- Created `src/ci-workflow.test.ts` with 7 tests (TDD: RED → GREEN) validating workflow structure.
+- All 8 tests pass; build succeeds.
