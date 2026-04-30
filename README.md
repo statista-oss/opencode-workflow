@@ -9,9 +9,9 @@ AI coding agents default to the shortest path — skipping specs, tests, and sec
 It packages 20 skills, 7 slash commands, 3 specialist agent personas, and 4 reference checklists directly into OpenCode, then injects a system prompt that maps every user intent to the right skill automatically.
 
 ```text
-  DEFINE          PLAN           BUILD          VERIFY         REVIEW          SHIP
+  DEFINE        PLAN          BUILD         VERIFY        REVIEW        SHIP
  ┌──────┐      ┌──────┐      ┌──────┐      ┌──────┐      ┌──────┐      ┌──────┐
- │ Idea │ ───▶ │ Spec │ ───▶ │ Code │ ───▶ │ Test │ ───▶ │  QA  │ ───▶ │  Go  │
+ │ Idea │ ---> │ Spec │ ---> │ Code │ ---> │ Test │ ---> │  QA  │ ---> │  Go  │
  │Refine│      │  PRD │      │ Impl │      │Debug │      │ Gate │      │ Live │
  └──────┘      └──────┘      └──────┘      └──────┘      └──────┘      └──────┘
 ```
