@@ -36,4 +36,12 @@ jobs:
         run: pnpm run start
 
       - name: Publish
-        run: npm publish
+        run: |
+          latest="$(npm show "$(jq -r '.name' package.json)" versions --json | jq -r '.[0]')"
+          dev="$(jq -r '.version' package.json)"
+          if [ "$latest" = "$dev" ]; then
+            echo "Version $dev is already published. Skipping publish step."
+          else
+            echo "Publishing version $dev to npm..."
+            npm publish
+          fi
