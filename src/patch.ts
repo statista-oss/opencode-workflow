@@ -1,4 +1,4 @@
-import { parse } from "yaml";
+import { parse, stringify } from "yaml";
 
 export type PatchFrontmatter = {
   description?: string;
@@ -13,6 +13,13 @@ export type ParsedPatch = {
 
 const frontMatterRegex = /^---(.*?\n)---([\s\S]*)$/s;
 
+function assertOptionalString(val: unknown, field: string): string | undefined {
+  if (val === undefined || val === null) return undefined;
+  if (typeof val !== "string")
+    throw new Error(`Patch field '${field}' must be a string, got ${typeof val}`);
+  return val;
+}
+
 export function parsePatchFrontmatter(patchContent: string): ParsedPatch {
   if (!patchContent.trim()) {
     return { frontmatter: {}, body: "" };
@@ -24,7 +31,16 @@ export function parsePatchFrontmatter(patchContent: string): ParsedPatch {
   }
 
   const [, yamlSection, bodySection] = match;
-  const frontmatter: PatchFrontmatter = yamlSection ? (parse(yamlSection) ?? {}) : {};
+  const raw: Record<string, unknown> = yamlSection ? (parse(yamlSection) ?? {}) : {};
+
+  const frontmatter: PatchFrontmatter = {};
+  const description = assertOptionalString(raw["description"], "description");
+  if (description !== undefined) frontmatter.description = description;
+  const prepend = assertOptionalString(raw["prepend"], "prepend");
+  if (prepend !== undefined) frontmatter.prepend = prepend;
+  const append = assertOptionalString(raw["append"], "append");
+  if (append !== undefined) frontmatter.append = append;
+
   const body = bodySection ? bodySection.replace(/^\n/, "") : "";
 
   return { frontmatter, body };
@@ -46,7 +62,7 @@ export function applyPatch(upstream: string, patch: string): string {
     return upstream;
   }
 
-  // Parse upstream into frontmatter + body
+  // Parse upstream into front-matter + body
   const upstreamMatch = upstream.match(frontMatterRegex);
   if (!upstreamMatch) {
     throw new Error("Upstream command does not have valid front-matter");
@@ -60,32 +76,26 @@ export function applyPatch(upstream: string, patch: string): string {
     ? upstreamBodyWithLeadingNewline.replace(/^\n/, "")
     : "";
 
-  // Rule 1: description override
+  // Rule 2 (spec): replace upstream description if patch provides one
   if (frontmatter.description !== undefined) {
-    upstreamFrontmatter["description"] = frontmatter.description;
+    upstreamFrontmatter.description = frontmatter.description;
   }
 
-  // Rule 2+3+4: determine body
+  // Rule 4 (spec): patch body fully replaces upstream body when non-empty
   let resultBody = hasBody ? patchBody : upstreamBody;
 
-  // Rule 2: prepend
+  // Rule 3 (spec): insert prepend before body
   if (frontmatter.prepend) {
     resultBody = frontmatter.prepend + resultBody;
   }
 
-  // Rule 3: append
+  // Rule 5 (spec): append after body
   if (frontmatter.append) {
     resultBody = resultBody + frontmatter.append;
   }
 
-  // Reconstruct YAML front-matter (simple key: value lines, preserve order)
-  // Use bare strings for string values; JSON for others
-  const yamlLines = Object.entries(upstreamFrontmatter)
-    .map(([k, v]) => {
-      if (typeof v === "string") return `${k}: ${v}`;
-      return `${k}: ${JSON.stringify(v)}`;
-    })
-    .join("\n");
+  // Serialize front-matter with the yaml library to preserve quoting correctness
+  const yamlStr = stringify(upstreamFrontmatter).trimEnd();
 
-  return `---\n${yamlLines}\n---\n${resultBody}`;
+  return `---\n${yamlStr}\n---\n${resultBody}`;
 }

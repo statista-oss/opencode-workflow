@@ -143,3 +143,35 @@ Replaced body.
   Assert.ok(prepIdx < bodyIdx, "prepend before body");
   Assert.ok(bodyIdx < appendIdx, "body before append");
 });
+
+await test("applyPatch: description with colon round-trips correctly", () => {
+  const patch = `---
+description: "Build — run lint: test, and ship"
+---
+`;
+  const result = applyPatch(upstream, patch);
+  // The description must parse back to the exact string (colon must not corrupt YAML)
+  const reparsed = parsePatchFrontmatter(
+    `---\n${result.slice(4, result.indexOf("\n---\n"))}\n---\n`,
+  );
+  Assert.strictEqual(reparsed.frontmatter.description, "Build — run lint: test, and ship");
+  Assert.ok(result.includes("Original body content."));
+});
+
+await test("parsePatchFrontmatter: throws for non-string prepend field", () => {
+  const input = `---
+prepend:
+  - item1
+  - item2
+---
+`;
+  Assert.throws(() => parsePatchFrontmatter(input), /Patch field 'prepend' must be a string/);
+});
+
+await test("parsePatchFrontmatter: throws for non-string description field", () => {
+  const input = `---
+description: 42
+---
+`;
+  Assert.throws(() => parsePatchFrontmatter(input), /Patch field 'description' must be a string/);
+});
