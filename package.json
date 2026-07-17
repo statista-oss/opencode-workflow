@@ -35,7 +35,7 @@
     "lint-staged": "^16.4.0",
     "oxfmt": "^0.47.0",
     "oxlint": "^1.62.0",
-    "oxlint-tsgolint": "^0.22.1",
+    "oxlint-tsgolint": "^0.25.0",
     "publint": "^0.3.18",
     "tsdown": "^0.21.10"
   },
